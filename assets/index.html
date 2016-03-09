@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+    <title>AndroidJavaScriptBridgeDemo</title>
+	<style type='text/css'>
+        .container {
+            text-align: center;
+        }
+		h1 { 
+            color:gray; 
+            font-size:24px;
+        }
+		button { 
+            margin:0 3px 10px; 
+            font-size:15px; 
+        }
+		.logLine { 
+            border-bottom:1px solid #ccc; 
+            padding:4px 4px; 
+            font-size:12px; 
+        }
+	</style>
+</head>
+<body>
+    <script>
+        window.log = (function(){
+            var uniqueId = 1;
+            function log(message, data) {
+
+                var logElem = document.getElementById("logContainer");
+                var newElem = document.createElement("div");
+                newElem.className = "logLine";
+
+                if (data) {
+                    console.log(message + ":<br/>" + data);
+                    newElem.innerHTML = uniqueId++ + '. ' + message + ':<br/>' + JSON.stringify(data)
+                }
+                else {
+                    console.log(message); 
+                    newElem.innerHTML = uniqueId++ + '. ' + message 
+                }
+                if (logElem.children.length) {
+                    logElem.insertBefore(newElem, logElem.children[0]);
+                }
+                else {
+                    logElem.appendChild(newElem);
+                }
+            }
+            return {_log: log}
+        })()._log;
+
+        window.onerror = function(err) {
+            log("window.onerror: " + err)
+        }
+
+        function connectToAndroidWebViewBridge(callback) {
+            if (window.AndroidWebViewBridge) {
+                callback(AndroidWebViewBridge)
+            } else {
+                document.addEventListener('AndroidWebViewBridgeReady', function() {
+                    callback(AndroidWebViewBridge)
+                }, false)
+            }
+        }
+
+        connectToAndroidWebViewBridge(function(bridge) {
+            bridge.init(function(message, responseCallback) {
+                log('JS got a message', message)
+                var data = { 'JS Responds' : 'Message received = )' }
+                responseCallback(data)
+            })
+
+            bridge.registerHandlerForAndroid('alertReceivedParmas', function(data, responseCallback) {
+                log('Android called alertPassinParmas with', JSON.stringify(data))
+                alert(JSON.stringify(data))
+                var responseData = { 'JS Responds' : 'alert triggered' }
+                responseCallback(responseData)
+            })
+
+            window.testSendDataToAndroid = function() {
+                bridge.sendDataToAndroid( 'Say Hello World to Android' )
+            }
+        });
+
+        function testSendDataToAndroidWithCallback() {
+            AndroidWebViewBridge.sendDataToAndroid( 'Hi, anybody there?' , function(responseData){
+                alert("got your response: " + JSON.stringify(responseData))
+            })
+        }
+
+        function testCallAndroidHandler() {
+            data = {"name": "小明", "age": "6", "school": "GDUT"}
+            log('JS is calling printReceivedParmas handler of Android', data)
+            AndroidWebViewBridge.callAndroidHandler("printReceivedParmas", data, null)
+        }
+
+        function testCallAndroidHandlerWithCallback() {
+            AndroidWebViewBridge.callAndroidHandler("printReceivedParmas", {"name": "XiaoMing", "age": "6", "school": "GDUT"}, function(responseData){
+                log('JS got responds from Android: ', responseData)
+            })
+        }
+
+    </script>
+    
+    <div class="container">
+        <h1>AndroidJavaScriptBridgeDemo</h1>
+        <button type="button" onclick="document.getElementById('logContainer').innerHTML = ''">Clear Log</button>
+        <br/>
+        <button type="button" onclick="testSendDataToAndroid()">testSendDataToAndroid</button>
+        <br/>
+        <button type="button" onclick="testSendDataToAndroidWithCallback()">testSendDataToAndroidWithCallback</button>
+        <br/>
+        <button type="button" onclick="testCallAndroidHandler()">testCallAndroidHandler</button>
+        <br/>
+        <button type="button" onclick="testCallAndroidHandlerWithCallback()">testCallAndroidHandlerWithCallback</button>
+        <br/>
+        <div id='logContainer'></div>
+    </div>
+</body>
+</html>
